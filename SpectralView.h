@@ -22,6 +22,7 @@ private:
     int pointerY=-1;
     int selectX=-1;
     int selectY=-1;
+    int mode=0; // 0 = pitch analysis, 1 = harmonic data
     GtkWidget* drawing_area;
     AnalysisEngine* engine;
 };

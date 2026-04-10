@@ -3,7 +3,9 @@
 
 #include <vector>
 #include <string>
+#include "Params.h"
 
+extern const double CORR_THRESH;
 const int NUM_HARMS=64;
 const int DEFAULT_SAMPLE_RATE = 48000;
 
@@ -26,7 +28,9 @@ public:
     AnalysisEngine(const std::string& filename);
     bool processAudio(); // Returns true if successful
     bool smooth();
+    bool smoothPitch();
     bool tune();
+    bool untune(double amount);
     
     // Getters for the UI to consume
     const std::vector<SpectrogramFrame>& getFrames() const { return frames; }
@@ -47,10 +51,12 @@ public:
     double MIDIToFreq(double midi);
     bool exportUnpitchedAudio(const std::string& outf);
     bool exportPitchedAudio(const std::string& outf);
+    bool exportTunedAudio(const std::string& outf);
     bool calculateHarmonicData();
     bool tuneFrame(int f, double pitch);
     double getLocalAverage(int frame) const { return frames[frame].localAverage; }
 	double getAverageCorrelation(int frame) const { return frames[frame].averageCorrelation; }
+	std::vector<double> getHarmonicData(int frame) const { return frames[frame].harmData; }
 
 private:
     std::string filename;

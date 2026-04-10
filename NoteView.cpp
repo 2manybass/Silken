@@ -3,8 +3,9 @@
 #include <iostream>
 #include <vector>
 #include <gtkmm.h>
+#include "Params.h"
 
-const double CORR_THRESH = 0.6;
+extern const double CORR_THRESH;
 const int MAX_DRAG_DIST = 4; // maximum distance between mouse and frame to "drag" pitch
 
 NoteView::NoteView(AnalysisEngine* e) : engine(e) {
@@ -134,6 +135,10 @@ gboolean NoteView::on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_d
 			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_rectangle(cr, x + offX, y2, 4, 2);
 			cairo_fill(cr);
+    	}else{
+			cairo_set_source_rgb(cr, 0.6, 0.5, 0.5);
+			cairo_rectangle(cr, x + offX, y, 4, 4);
+			cairo_fill(cr);    	
     	}
     	//std::cout << "Frame: " << f << std::endl;
     	//std::cout << "Fundamental: " << fund << std::endl;

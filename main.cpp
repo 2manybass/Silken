@@ -20,15 +20,33 @@ struct AppData {
 void quickTune(GtkWidget *widget, gpointer data){
 	AppData* app = static_cast<AppData*>(data);
 	app->engine->tune();
+	app->engine->calculateHarmonicData();
 	gtk_widget_queue_draw(app->nv->getWidget());
+	gtk_widget_queue_draw(app->sv->getWidget());
 }
-
+void smoothPitch(GtkWidget *widget, gpointer data){
+	AppData* app = static_cast<AppData*>(data);
+	app->engine->smoothPitch();
+	app->engine->calculateHarmonicData();
+	gtk_widget_queue_draw(app->nv->getWidget());
+	gtk_widget_queue_draw(app->sv->getWidget());
+}
 void exportAll(GtkWidget *widget, gpointer data){
 	AppData* app = static_cast<AppData*>(data);
 	app->engine->calculateHarmonicData();
     app->engine->exportPitchedAudio("outputfile-pitched.wav");
     app->engine->exportUnpitchedAudio("output-unpitched.wav");
-	
+}
+void exportTuned(GtkWidget *widget, gpointer data){
+	AppData* app = static_cast<AppData*>(data);
+	app->engine->calculateHarmonicData();
+    app->engine->exportTunedAudio("outputfile-tuned.wav");
+}
+void untune(GtkWidget *widget, gpointer data){
+	AppData* app = static_cast<AppData*>(data);
+	app->engine->untune(0.5);
+	gtk_widget_queue_draw(app->nv->getWidget());
+	app->engine->calculateHarmonicData();
 }
 
 // GTK Draw Callback: This is where the "Spectrogram" is rendered
@@ -80,7 +98,9 @@ int main(int argc, char *argv[]) {
 	GtkWidget *exportUnpitchedMI;
 	GtkWidget *exportPitchedMI;
 	GtkWidget *exportAllMI;
+	GtkWidget *exportTunedMI;
 	GtkWidget *spectSettingsMI;
+	GtkWidget *untuneMI;
 
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
@@ -100,11 +120,13 @@ int main(int argc, char *argv[]) {
 	quickTuneMI=gtk_menu_item_new_with_label("Quick Tune");
 	smartTuneMI=gtk_menu_item_new_with_label("Smart Tune");
 	smoothMI=gtk_menu_item_new_with_label("Smooth pitch");
+	untuneMI=gtk_menu_item_new_with_label("Un-tune");
 	exitMI=gtk_menu_item_new_with_label("Exit");
 	exportMI=gtk_menu_item_new_with_label("Export");
 	exportUnpitchedMI=gtk_menu_item_new_with_label("Export unpitched audio...");
 	exportPitchedMI=gtk_menu_item_new_with_label("Export pitched audio...");
 	exportAllMI=gtk_menu_item_new_with_label("Export audio...");
+	exportTunedMI=gtk_menu_item_new_with_label("Export tuned audio...");
 	optionsMI=gtk_menu_item_new_with_label("Options");
 	spectSettingsMI=gtk_menu_item_new_with_label("Spectrogram settings");
 	
@@ -116,6 +138,7 @@ int main(int argc, char *argv[]) {
 	gtk_menu_shell_append(GTK_MENU_SHELL(exportMenu), exportUnpitchedMI);
 	gtk_menu_shell_append(GTK_MENU_SHELL(exportMenu), exportPitchedMI);
 	gtk_menu_shell_append(GTK_MENU_SHELL(exportMenu), exportAllMI);
+	gtk_menu_shell_append(GTK_MENU_SHELL(exportMenu), exportTunedMI);
 	gtk_menu_shell_append(GTK_MENU_SHELL(fileMenu), exitMI);
 	
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(audioMI), audioMenu);
@@ -123,6 +146,8 @@ int main(int argc, char *argv[]) {
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(tuneMI), tuneMenu);
 	gtk_menu_shell_append(GTK_MENU_SHELL(tuneMenu), quickTuneMI);
 	gtk_menu_shell_append(GTK_MENU_SHELL(tuneMenu), smartTuneMI);
+	gtk_menu_shell_append(GTK_MENU_SHELL(tuneMenu), untuneMI);
+	gtk_menu_shell_append(GTK_MENU_SHELL(tuneMenu), smoothMI);
 	gtk_menu_shell_append(GTK_MENU_SHELL(menubar), audioMI);
 
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(optionsMI), optionsMenu);
@@ -139,7 +164,10 @@ int main(int argc, char *argv[]) {
 	
 	g_signal_connect(G_OBJECT(exitMI), "activate", G_CALLBACK(gtk_main_quit), NULL);
 	g_signal_connect(G_OBJECT(quickTuneMI), "activate", G_CALLBACK(quickTune), &app);
+	g_signal_connect(G_OBJECT(smoothMI), "activate", G_CALLBACK(smoothPitch), &app);
 	g_signal_connect(G_OBJECT(exportAllMI), "activate", G_CALLBACK(exportAll), &app);
+	g_signal_connect(G_OBJECT(exportTunedMI), "activate", G_CALLBACK(exportTuned), &app);
+	g_signal_connect(G_OBJECT(untuneMI), "activate", G_CALLBACK(untune), &app);
 	
     gtk_widget_show_all(window);
     gtk_main();
