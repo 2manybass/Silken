@@ -7,6 +7,7 @@ const int FREQ_DELTA = 100;
 const int offX=50;
 const int offY=30;
 extern const double CORR_THRESH;
+extern const double RMS_THRESH;
 
 gboolean SpectralView::move(GtkWidget *widget, GdkEventMotion *event, gpointer user_data){
 	auto* view = static_cast<SpectralView*>(user_data);
@@ -128,38 +129,19 @@ gboolean SpectralView::on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer us
 				}
 			}
 			
-			// draw the local average
-			/*
-			double avgRatio=windowRatio(engine->getLocalAverage(frame), min_freq, max_freq, linear);
-			double avgCorr = engine->getAverageCorrelation(frame);
-			int avgY=height - (int)std::round(avgRatio * (double)height);
-			cairo_set_source_rgb(cr, avgCorr, avgCorr, avgCorr); 
-			cairo_rectangle(cr, x + offX, avgY + offY, 2, 2);
-			cairo_fill(cr);
-			*/
-			
-			
 			double corr=engine->getCorrelation(frame);
-			cairo_set_source_rgb(cr, 0, corr, corr); // draw the fundamental in CYAN
-			//cairo_set_source_rgb(cr, 0, 1, 1);
-			double ratio=windowRatio(engine->getFund(frame), min_freq, max_freq, linear);
-			int rectY=height - (int)std::round(ratio * (double)height);
-			if(rectY > 0 && rectY < height){ // if the rect is within bounds
-				cairo_rectangle(cr, x + offX, rectY + offY, 2, 2);
-				cairo_fill(cr);
-			}
-			/*
-			for(int i=1; i<NUM_HARMS / 8; i++){ // draw the harmonics (or at least some of them)
-				double ratio2=windowRatio(engine->getFund(frame)*(i+1), min_freq, max_freq, linear);
-				int rectY2=height - (int)std::round(ratio2 * (double)height);
-				if(rectY2 > 0 && rectY < height){ // if the rect is within bounds
-					double op = corr / i;
-					cairo_set_source_rgba(cr, corr, corr, 0, op); 
-					cairo_rectangle(cr, x + offX, rectY2 + offY, 2, 2);
+			double rms = engine -> getRMS(frame);
+			double ratio = rms / engine->getMaxRMS();
+			if(ratio > RMS_THRESH){
+				cairo_set_source_rgb(cr, 0, corr, corr); // draw the fundamental in CYAN
+				//cairo_set_source_rgb(cr, 0, 1, 1);
+				double ratio=windowRatio(engine->getFund(frame), min_freq, max_freq, linear);
+				int rectY=height - (int)std::round(ratio * (double)height);
+				if(rectY > 0 && rectY < height){ // if the rect is within bounds
+					cairo_rectangle(cr, x + offX, rectY + offY, 2, 2);
 					cairo_fill(cr);
 				}
 			}
-			*/
 		}
 		cairo_set_source_rgb(cr, 1, 1, 0);
 		cairo_rectangle(cr, view->getPointerX(), offY, 1, height);

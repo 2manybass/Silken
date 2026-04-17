@@ -5,6 +5,7 @@
 #include <gtkmm.h>
 #include "Params.h"
 
+extern const double RMS_THRESH;
 extern const double CORR_THRESH;
 const int MAX_DRAG_DIST = 4; // maximum distance between mouse and frame to "drag" pitch
 
@@ -127,22 +128,17 @@ gboolean NoteView::on_draw_event(GtkWidget *widget, cairo_t *cr, gpointer user_d
     	double ratio2 = (midiPitch2 - view->minPitch - 0.5) / (double)view->pitchRange;
     	int y = view->height + offY - ratio*view->height - 2;
     	int y2 = view->height + offY - ratio2*view->height - 1;
-		double corr=engine -> getCorrelation(f);
-		if(corr > CORR_THRESH){
+    	double maxRMS = engine -> getMaxRMS();
+		double corr = engine -> getCorrelation(f);
+		double rms = engine -> getRMS(f);
+		if(corr > CORR_THRESH && rms / maxRMS > RMS_THRESH){
 			cairo_set_source_rgb(cr, 0.6, 0.6, 0.6);
 			cairo_rectangle(cr, x + offX, y, 4, 4);
 			cairo_fill(cr);
 			cairo_set_source_rgb(cr, 0, 0, 0);
 			cairo_rectangle(cr, x + offX, y2, 4, 2);
 			cairo_fill(cr);
-    	}else{
-			cairo_set_source_rgb(cr, 0.6, 0.5, 0.5);
-			cairo_rectangle(cr, x + offX, y, 4, 4);
-			cairo_fill(cr);    	
     	}
-    	//std::cout << "Frame: " << f << std::endl;
-    	//std::cout << "Fundamental: " << fund << std::endl;
-    	//std::cout << "MIDI Pitch: " << midiPitch << std::endl;
     }
     
     return FALSE;

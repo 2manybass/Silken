@@ -5,6 +5,7 @@
 #include <string>
 #include "Params.h"
 
+extern const double RMS_THRESH;
 extern const double CORR_THRESH;
 const int NUM_HARMS=64;
 const int DEFAULT_SAMPLE_RATE = 48000;
@@ -18,7 +19,7 @@ struct SpectrogramFrame {
     double correlation;
     double tunedFrequency;
     double time;
-    double rms;
+    double rms; // rms stored in a double value representing amplitude
     double localAverage;
     double averageCorrelation;
 };
@@ -57,6 +58,8 @@ public:
     double getLocalAverage(int frame) const { return frames[frame].localAverage; }
 	double getAverageCorrelation(int frame) const { return frames[frame].averageCorrelation; }
 	std::vector<double> getHarmonicData(int frame) const { return frames[frame].harmData; }
+	double getMaxRMS() const {return maxRMS;}
+	double getRMS(int frame) const { return frames[frame].rms; }
 
 private:
     std::string filename;
@@ -64,7 +67,7 @@ private:
     int sampleRate;
     int frameSize;
     int binCount;
-    // Private helper methods for DSP...
+    double maxRMS;
 };
 
 #endif

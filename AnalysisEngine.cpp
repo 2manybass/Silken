@@ -19,7 +19,6 @@ bool AnalysisEngine::processAudio() {
     SF_INFO sfinfo;
     SNDFILE* infile = sf_open(filename.c_str(), SFM_READ, &sfinfo);
     sampleRate=sfinfo.samplerate;
-    //std::cout << "Sample rate: " << sfinfo.samplerate << std::endl;
 
     if (!infile) {
         std::cerr << "Could not open file!" << std::endl;
@@ -38,7 +37,6 @@ bool AnalysisEngine::processAudio() {
     fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (N / 2 + 1));
     fftw_plan p = fftw_plan_dft_r2c_1d(N, in, out, FFTW_MEASURE);
 
-    // Prepare Hann window pre-calculated
 	std::vector<double> hannWindow(N);
     for (int i = 0; i < N; i++) {
 		hannWindow[i] = 0.5 * (1.0 - cos(2.0 * M_PI * i / (N - 1)));
@@ -47,18 +45,18 @@ bool AnalysisEngine::processAudio() {
 	sf_count_t read_count;
 	int frame_count = 0;
 	long frame_offset = 0;
+	maxRMS = 0;
 
-	// THE CORE LOOP
-	// We read 'hop_size' new samples and shift the old ones back
 	while((read_count = sf_read_double(infile, full_buffer.data() + (N - hop_size), hop_size)) > 0){
 		double rms;
-		// 1. Apply Window to the current N samples
 		for(int i=0; i < N; i++) {
 			in[i]=full_buffer[i] * hannWindow [i];
 			rms+=in[i]*in[i];
 		}
 		rms = std::pow(rms / N, 0.5); // avg and root
-		// 2. Execute FFT
+		if(maxRMS < rms){
+			maxRMS = rms;
+		}
 		fftw_execute(p);
 		
 		// 3. Process Magnitudes (convert to dB)
@@ -157,13 +155,6 @@ bool AnalysisEngine::processAudio() {
 		frame_count++;
 		frame_offset += hop_size;
     }
-    /*
-	std::cout << "Processed " << frame_count << " frames." << std::endl;
-	std::cout << "FFT frames: " << data.width << std::endl;
-	std::cout << "# of bins: " << data.height << std::endl;
-	std::cout << "Bytes of data used: " << data.width * data.height << std::endl;
-	*/
-    // Cleanup
     fftw_destroy_plan(p);
     fftw_free(in);
     fftw_free(out);
@@ -520,7 +511,7 @@ bool AnalysisEngine::exportTunedAudio(const std::string& outf){
 	int lastFullWriteStart = 0;
 	bool lastBufferTuned = false;
 	int lastReadOffset = 0;
-
+		
 	while((read_count = sf_read_double(infile, full_buffer.data() + (N - hop_size), hop_size)) > 0){
 		double time = (double)frame_offset / (double)sfinfo.samplerate;
 		int frameLeft = 0;
@@ -531,12 +522,13 @@ bool AnalysisEngine::exportTunedAudio(const std::string& outf){
 			frameLeft--;
 		}
 		double corr = frames[frameLeft].correlation;
+		double rms = frames[frameLeft].rms;
 		fund = frames[frameLeft].fundamental; // roughly calculate pitch-dependent variables
 		pitch = frames[frameLeft].tunedFrequency;
 		targetDist = sfinfo.samplerate * 2 / pitch; // the wavelength to aim for (2 periods)
 		readDist = sfinfo.samplerate * 2 / fund;
 		//std::cout << "Read offset at BEGINNING of buffer: " << readOffset << std::endl;
-		if(corr > CORR_THRESH){
+		if(corr > CORR_THRESH && rms / maxRMS > RMS_THRESH){
 			bool finished = false;
 			if(!lastBufferTuned || writeStart == 0){ // if read/write variables not initialized
 				writeStart = N/4 - (targetDist / 2.0); // Set it up so that phase will be at 0.5; therefore we'll be in the middle of the Hann window
@@ -746,7 +738,7 @@ bool AnalysisEngine::tuneFrame(int frame, double pitch){
 double AnalysisEngine::getMinimumPitch(double thresh){
 	double min = MAX_FREQ;
 	for(int i=0; i<getFrameCount(); i++){
-		if(getCorrelation(i)>thresh && getFund(i)<min){
+		if(getCorrelation(i)>thresh && getRMS(i) / maxRMS > RMS_THRESH && getFund(i)<min){
 			min = getFund(i);
 		}
 	}
@@ -755,7 +747,7 @@ double AnalysisEngine::getMinimumPitch(double thresh){
 double AnalysisEngine::getMaximumPitch(double thresh){
 	double max = MIN_FREQ;
 	for(int i=0; i<getFrameCount(); i++){
-		if(getCorrelation(i)>thresh && getFund(i)>max){
+		if(getCorrelation(i)>thresh && getRMS(i) / maxRMS > RMS_THRESH && getFund(i)>max){
 			max = getFund(i);
 		}
 	}
